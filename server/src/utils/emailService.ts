@@ -4,16 +4,14 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // true for 465, false for other ports
+    service: 'gmail',
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     },
     logger: true,
     debug: true,
-    connectionTimeout: 10000, // 10 seconds
+    connectionTimeout: 60000, // 60 seconds
     family: 4 // Force IPv4
 } as any);
 
