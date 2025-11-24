@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { supabase } from '../supabaseClient';
 import { prisma } from '../index';
+import { sendAdminAlert } from '../utils/emailService';
 
 export const signup = async (req: Request, res: Response) => {
     const { email, password, username } = req.body;
@@ -20,6 +21,13 @@ export const signup = async (req: Request, res: Response) => {
         if (data.user) {
             // 2. Profile is created by DB trigger, but we can verify or update if needed
             // For now, we trust the trigger.
+
+            // Notify Admin
+            await sendAdminAlert(
+                'New User Registration',
+                `New user registered: ${username} (${email})`
+            );
+
             res.status(201).json({ message: 'User created successfully', user: data.user });
         } else {
             res.status(400).json({ message: 'User creation failed' });

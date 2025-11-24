@@ -18,6 +18,7 @@ import { AdminDashboard } from './pages/admin/Dashboard';
 import { AdminTournaments } from './pages/admin/Tournaments';
 import { AdminUsers } from './pages/admin/Users';
 import { AdminTransactions } from './pages/admin/Transactions';
+import { AdminNotifications } from './pages/admin/Notifications';
 
 function App() {
   const { initializeRealtime, initializeAuth } = useStore();
@@ -51,6 +52,7 @@ function App() {
             <Route path="tournaments" element={<AdminTournaments />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="transactions" element={<AdminTransactions />} />
+            <Route path="notifications" element={<AdminNotifications />} />
           </Route>
         </Routes>
       </div>

@@ -18,6 +18,8 @@ export const getTransactions = async (req: Request, res: Response) => {
     }
 };
 
+import { sendAdminAlert } from '../utils/emailService';
+
 export const requestDeposit = async (req: Request, res: Response) => {
     const { userId, amount, upiRef } = req.body;
 
@@ -31,6 +33,13 @@ export const requestDeposit = async (req: Request, res: Response) => {
                 status: 'pending'
             }
         });
+
+        // Notify Admin
+        await sendAdminAlert(
+            'New Deposit Request',
+            `User ${userId} requested a deposit of ₹${amount}. UPI Ref: ${upiRef}`
+        );
+
         res.status(201).json(transaction);
     } catch (error: any) {
         res.status(400).json({ error: error.message });
@@ -64,6 +73,12 @@ export const requestWithdrawal = async (req: Request, res: Response) => {
                 }
             })
         ]);
+
+        // Notify Admin
+        await sendAdminAlert(
+            'New Withdrawal Request',
+            `User ${userId} requested a withdrawal of ₹${amount}. UPI ID: ${upiId}`
+        );
 
         res.status(201).json({ message: "Withdrawal requested" });
     } catch (error: any) {

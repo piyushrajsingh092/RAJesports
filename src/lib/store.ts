@@ -35,6 +35,7 @@ interface AppState {
     cancelTournament: (tournamentId: string) => Promise<void>;
     approveTransaction: (transactionId: string) => Promise<void>;
     rejectTransaction: (transactionId: string) => Promise<void>;
+    sendBroadcast: (subject: string, message: string) => Promise<void>;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -342,6 +343,14 @@ export const useStore = create<AppState>((set, get) => ({
         } catch (error: any) {
             const message = error.response?.data?.error || error.message || "Failed to reject transaction";
             alert(message);
+        }
+    },
+
+    sendBroadcast: async (subject: string, message: string) => {
+        try {
+            await api.post('/notifications/broadcast', { subject, message });
+        } catch (error: any) {
+            throw new Error(error.response?.data?.error || error.message || "Failed to send broadcast");
         }
     },
 }));

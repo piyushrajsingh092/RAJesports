@@ -9,6 +9,7 @@ const sidebarItems = [
     { icon: Trophy, label: "Tournaments", href: "/admin/tournaments" },
     { icon: Users, label: "Users", href: "/admin/users" },
     { icon: CreditCard, label: "Transactions", href: "/admin/transactions" },
+    { icon: Menu, label: "Notifications", href: "/admin/notifications" },
 ];
 
 export function AdminLayout() {
