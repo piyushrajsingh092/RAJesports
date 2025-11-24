@@ -67,6 +67,8 @@ export const sendTestEmail = async (req: Request, res: Response) => {
 export const getNotifications = async (req: Request, res: Response) => {
     const { userId } = req.query;
 
+    console.log('GET /notifications called with userId:', userId);
+
     if (!userId) {
         return res.status(400).json({ error: 'User ID required' });
     }

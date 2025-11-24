@@ -8,21 +8,24 @@ export const createNotification = async (
     message: string,
     type: NotificationType = 'info'
 ) => {
+    console.log(`Creating notification for user ${userId}: ${title}`);
     try {
-        const { error } = await supabase
+        const { error, data } = await supabase
             .from('notifications')
             .insert({
                 user_id: userId,
                 title,
                 message,
                 type
-            });
+            })
+            .select();
 
         if (error) {
             console.error('Error creating notification:', error);
             return false;
         }
 
+        console.log('Notification created successfully:', data);
         return true;
     } catch (error) {
         console.error('Error creating notification:', error);
@@ -88,6 +91,8 @@ export const notifyAllAdmins = async (title: string, message: string, type: Noti
             return false;
         }
 
+        console.log(`Notifying ${admins.length} admins: ${title}`);
+
         // Create notification for each admin
         const notifications = admins.map(admin => ({
             user_id: admin.id,
@@ -105,6 +110,7 @@ export const notifyAllAdmins = async (title: string, message: string, type: Noti
             return false;
         }
 
+        console.log(`Successfully created ${admins.length} admin notifications`);
         return true;
     } catch (error) {
         console.error('Error notifying admins:', error);
