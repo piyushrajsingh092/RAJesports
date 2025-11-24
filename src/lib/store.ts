@@ -123,7 +123,8 @@ export const useStore = create<AppState>((set, get) => ({
     },
 
     fetchUsers: async () => {
-        const { data } = await supabase.from('profiles').select('*');
+        const { data, error } = await supabase.from('profiles').select('*');
+        if (error) console.error("Error fetching users:", error);
         if (data) set({ users: data as User[] });
     },
 
