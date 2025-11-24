@@ -1,9 +1,10 @@
 import { Request, Response } from 'express';
 import { prisma } from '../index';
+import { sendAdminAlert } from '../utils/emailService';
+import { createNotification } from '../utils/notificationService';
 
 export const getTransactions = async (req: Request, res: Response) => {
-    const { userId } = req.query; // Admin can see all, user sees own
-    // In real app, get userId from token and check role
+    const { userId } = req.query;
 
     try {
         const where = userId ? { user_id: String(userId) } : {};
@@ -17,8 +18,6 @@ export const getTransactions = async (req: Request, res: Response) => {
         res.status(500).json({ error: error.message });
     }
 };
-
-import { sendAdminAlert } from '../utils/emailService';
 
 export const requestDeposit = async (req: Request, res: Response) => {
     const { userId, amount, upiRef } = req.body;
@@ -34,7 +33,6 @@ export const requestDeposit = async (req: Request, res: Response) => {
             }
         });
 
-        // Notify Admin
         await sendAdminAlert(
             'New Deposit Request',
             `User ${userId} requested a deposit of ₹${amount}. UPI Ref: ${upiRef}`
@@ -57,7 +55,6 @@ export const requestWithdrawal = async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Insufficient balance" });
         }
 
-        // Deduct balance immediately and create transaction
         await prisma.$transaction([
             prisma.profiles.update({
                 where: { id: userId },
@@ -74,7 +71,6 @@ export const requestWithdrawal = async (req: Request, res: Response) => {
             })
         ]);
 
-        // Notify Admin
         await sendAdminAlert(
             'New Withdrawal Request',
             `User ${userId} requested a withdrawal of ₹${amount}. UPI ID: ${upiId}`
@@ -90,32 +86,46 @@ export const approveTransaction = async (req: Request, res: Response) => {
     const { id } = req.params;
 
     try {
-        const tx = await prisma.transactions.findUnique({ where: { id } });
-        if (!tx || tx.status !== 'pending') return res.status(400).json({ error: "Invalid transaction" });
-
-        if (tx.type === 'deposit') {
-            // Add balance
-            await prisma.$transaction([
-                prisma.transactions.update({
-                    where: { id },
-                    data: { status: 'approved' }
-                }),
-                prisma.profiles.update({
-                    where: { id: tx.user_id! },
-                    data: { balance: { increment: tx.amount } }
-                })
-            ]);
-        } else {
-            // Withdrawal: Balance already deducted, just update status
-            await prisma.transactions.update({
-                where: { id },
-                data: { status: 'approved' }
-            });
+        const transaction = await prisma.transactions.findUnique({ where: { id } });
+        if (!transaction) {
+            return res.status(404).json({ error: 'Transaction not found' });
         }
 
-        res.json({ message: "Transaction approved" });
+        if (transaction.status !== 'pending') {
+            return res.status(400).json({ error: 'Transaction already processed' });
+        }
+
+        await prisma.transactions.update({
+            where: { id },
+            data: { status: 'approved' }
+        });
+
+        if (transaction.type === 'deposit') {
+            await prisma.profiles.update({
+                where: { id: transaction.user_id! },
+                data: { balance: { increment: transaction.amount } }
+            });
+
+            await createNotification(
+                transaction.user_id!,
+                'Deposit Approved',
+                `Your deposit of ₹${transaction.amount} has been approved and added to your wallet.`,
+                'success'
+            );
+        }
+
+        if (transaction.type === 'withdrawal') {
+            await createNotification(
+                transaction.user_id!,
+                'Withdrawal Approved',
+                `Your withdrawal of ₹${transaction.amount} has been approved and will be processed shortly.`,
+                'success'
+            );
+        }
+
+        res.json({ message: 'Transaction approved' });
     } catch (error: any) {
-        res.status(400).json({ error: error.message });
+        res.status(500).json({ error: error.message });
     }
 };
 
@@ -123,31 +133,36 @@ export const rejectTransaction = async (req: Request, res: Response) => {
     const { id } = req.params;
 
     try {
-        const tx = await prisma.transactions.findUnique({ where: { id } });
-        if (!tx || tx.status !== 'pending') return res.status(400).json({ error: "Invalid transaction" });
+        const transaction = await prisma.transactions.findUnique({ where: { id } });
+        if (!transaction) {
+            return res.status(404).json({ error: 'Transaction not found' });
+        }
 
-        if (tx.type === 'withdrawal') {
-            // Refund balance
-            await prisma.$transaction([
-                prisma.transactions.update({
-                    where: { id },
-                    data: { status: 'rejected' }
-                }),
-                prisma.profiles.update({
-                    where: { id: tx.user_id! },
-                    data: { balance: { increment: tx.amount } }
-                })
-            ]);
-        } else {
-            // Deposit: Just update status
-            await prisma.transactions.update({
-                where: { id },
-                data: { status: 'rejected' }
+        if (transaction.status !== 'pending') {
+            return res.status(400).json({ error: 'Transaction already processed' });
+        }
+
+        await prisma.transactions.update({
+            where: { id },
+            data: { status: 'rejected' }
+        });
+
+        if (transaction.type === 'withdrawal') {
+            await prisma.profiles.update({
+                where: { id: transaction.user_id! },
+                data: { balance: { increment: transaction.amount } }
             });
         }
 
-        res.json({ message: "Transaction rejected" });
+        await createNotification(
+            transaction.user_id!,
+            `${transaction.type === 'deposit' ? 'Deposit' : 'Withdrawal'} Rejected`,
+            `Your ${transaction.type} request of ₹${transaction.amount} has been rejected.`,
+            'error'
+        );
+
+        res.json({ message: 'Transaction rejected' });
     } catch (error: any) {
-        res.status(400).json({ error: error.message });
+        res.status(500).json({ error: error.message });
     }
 };

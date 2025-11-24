@@ -9,6 +9,7 @@ interface AppState {
     users: User[];
     transactions: Transaction[];
     matches: Match[];
+    notifications: any[];
     isLoading: boolean;
 
     // Actions
@@ -37,6 +38,8 @@ interface AppState {
     approveTransaction: (transactionId: string) => Promise<void>;
     rejectTransaction: (transactionId: string) => Promise<void>;
     sendBroadcast: (subject: string, message: string) => Promise<void>;
+    fetchNotifications: () => Promise<void>;
+    markNotificationAsRead: (id: string) => Promise<void>;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -45,6 +48,7 @@ export const useStore = create<AppState>((set, get) => ({
     users: [],
     transactions: [],
     matches: [],
+    notifications: [],
     isLoading: false,
 
     login: async (email, password) => {
@@ -195,6 +199,13 @@ export const useStore = create<AppState>((set, get) => ({
             .channel('public:tournament_participants')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament_participants' }, () => {
                 get().fetchTournaments();
+            })
+            .subscribe();
+
+        supabase
+            .channel('public:notifications')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+                get().fetchNotifications();
             })
             .subscribe();
     },
@@ -369,5 +380,34 @@ export const useStore = create<AppState>((set, get) => ({
 
         // Optimistic update
         set({ currentUser: { ...currentUser, username } });
+    },
+
+    fetchNotifications: async () => {
+        const { currentUser } = get();
+        if (!currentUser) return;
+
+        try {
+            const { data } = await api.get('/notifications', {
+                params: { userId: currentUser.id }
+            });
+            set({ notifications: data || [] });
+        } catch (error) {
+            console.error('Error fetching notifications:', error);
+        }
+    },
+
+    markNotificationAsRead: async (id: string) => {
+        try {
+            await api.put(`/notifications/${id}/read`);
+            // Optimistic update
+            const { notifications } = get();
+            set({
+                notifications: notifications.map(n =>
+                    n.id === id ? { ...n, read: true } : n
+                )
+            });
+        } catch (error) {
+            console.error('Error marking notification as read:', error);
+        }
     },
 }));

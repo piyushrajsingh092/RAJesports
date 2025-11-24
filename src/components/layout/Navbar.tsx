@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "../ui/Button";
 import { Trophy, User, Wallet, Menu, X } from "lucide-react";
 import { useStore } from "../../lib/store";
+import { NotificationBell } from "../NotificationBell";
 
 export function Navbar() {
     const { currentUser, logout } = useStore();
@@ -45,6 +46,7 @@ export function Navbar() {
                                     <Wallet className="h-5 w-5" />
                                 </Button>
                             </Link>
+                            <NotificationBell />
                             <Link to="/profile">
                                 <Button variant="ghost" size="icon">
                                     <User className="h-5 w-5" />

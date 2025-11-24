@@ -63,3 +63,49 @@ export const sendTestEmail = async (req: Request, res: Response) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+export const getNotifications = async (req: Request, res: Response) => {
+    const { userId } = req.query;
+
+    if (!userId) {
+        return res.status(400).json({ error: 'User ID required' });
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        if (error) throw error;
+
+        res.json(data || []);
+    } catch (error: any) {
+        console.error('Get notifications error:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const markNotificationAsRead = async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    if (!id) {
+        return res.status(400).json({ error: 'Notification ID required' });
+    }
+
+    try {
+        const { error } = await supabase
+            .from('notifications')
+            .update({ read: true })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        res.json({ message: 'Notification marked as read' });
+    } catch (error: any) {
+        console.error('Mark as read error:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
