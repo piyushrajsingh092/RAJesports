@@ -3,15 +3,6 @@ import { Bell } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { Button } from './ui/Button';
 
-interface Notification {
-    id: string;
-    title: string;
-    message: string;
-    type: 'info' | 'success' | 'warning' | 'error';
-    read: boolean;
-    created_at: string;
-}
-
 export function NotificationBell() {
     const { currentUser, notifications, fetchNotifications, markNotificationAsRead } = useStore();
     const [isOpen, setIsOpen] = useState(false);
