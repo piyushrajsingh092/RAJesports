@@ -88,16 +88,12 @@ export function AdminNotifications() {
                         const email = prompt("Enter email to send test to:");
                         if (!email) return;
                         try {
-                            const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/notifications/test`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ email })
-                            });
-                            const data = await res.json();
-                            if (res.ok) alert(data.message);
-                            else alert("Error: " + data.error);
+                            // Use the shared api client which handles the base URL correctly
+                            const { data } = await import('../../lib/api').then(m => m.default.post('/notifications/test', { email }));
+                            alert(data.message);
                         } catch (e: any) {
-                            alert("Request failed: " + e.message);
+                            const msg = e.response?.data?.error || e.message || "Request failed";
+                            alert("Error: " + msg);
                         }
                     }}>
                         Send Test Email
